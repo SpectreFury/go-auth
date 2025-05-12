@@ -1,17 +1,20 @@
 package main
 
 import (
-	"fmt"
+	"context"
 	"log"
 	"net/http"
 	"time"
 
+	"github.com/SpectreFury/go-auth/internal/db"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/jackc/pgx/v5"
 )
 
 type application struct {
 	config config
+	conn   *pgx.Conn
 }
 
 type config struct {
@@ -19,6 +22,15 @@ type config struct {
 }
 
 func (app *application) mount() *chi.Mux {
+	// Connect to the database before creating router
+	ctx := context.Background()
+
+	conn, err := db.Connect(ctx)
+	if err != nil {
+		log.Fatal(err)
+	}
+	app.conn = conn
+
 	r := chi.NewRouter()
 
 	r.Use(middleware.RequestID)
@@ -34,11 +46,6 @@ func (app *application) mount() *chi.Mux {
 }
 
 func (app *application) run(mux *chi.Mux) error {
-
-	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		fmt.Println("/ was hit by the client")
-	})
-
 	server := &http.Server{
 		Addr:         app.config.addr,
 		Handler:      mux,
@@ -46,7 +53,6 @@ func (app *application) run(mux *chi.Mux) error {
 		ReadTimeout:  time.Second * 10,
 		IdleTimeout:  time.Minute,
 	}
-
 	log.Printf("Server listening on %s", app.config.addr)
 
 	return server.ListenAndServe()
