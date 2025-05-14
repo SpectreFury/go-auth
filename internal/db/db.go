@@ -34,11 +34,11 @@ func UserExists(conn *pgx.Conn, ctx context.Context, query string, email string)
 	return true, nil
 }
 
-func GetUser(conn *pgx.Conn, ctx context.Context, query string, email string) (userEmail string, hashedPassword string, returnError error) {
-	var scannedEmail string
+func GetUser(conn *pgx.Conn, ctx context.Context, query string, email string) (userId string, hashedPassword string, returnError error) {
+	var scannedId string
 	var scannedPassword string
 
-	err := conn.QueryRow(ctx, query, email).Scan(&scannedEmail, &scannedPassword)
+	err := conn.QueryRow(ctx, query, email).Scan(&scannedId, &scannedPassword)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			fmt.Println("RESULT: No user found")
@@ -49,12 +49,24 @@ func GetUser(conn *pgx.Conn, ctx context.Context, query string, email string) (u
 		return "", "", err
 	}
 
-	fmt.Println("User found: ", scannedEmail)
-	return scannedEmail, scannedPassword, nil
+	fmt.Println("User found: ", scannedId)
+	return scannedId, scannedPassword, nil
 }
 
 func InsertUser(conn *pgx.Conn, ctx context.Context, query string, email string, hashedPassword string) error {
 	_, err := conn.Exec(ctx, query, email, hashedPassword)
 
 	return err
+}
+
+func InsertSession(conn *pgx.Conn, ctx context.Context, query string, sessionId string, userId string) error {
+	_, err := conn.Exec(ctx, query, sessionId, userId)
+	if err != nil {
+		fmt.Println("Error in inserting session")
+		fmt.Println(err)
+		return err
+	}
+
+	fmt.Println("Successfully inserted the session")
+	return nil
 }

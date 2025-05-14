@@ -51,6 +51,7 @@ func (app *application) mount() *chi.Mux {
 	r.Route("/api", func(r chi.Router) {
 		r.Post("/signup", app.signUpHandler)
 		r.Post("/login", app.loginHandler)
+		r.Get("/session", app.sessionHandler)
 	})
 
 	return r

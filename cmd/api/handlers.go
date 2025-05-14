@@ -4,8 +4,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/SpectreFury/go-auth/internal/db"
+	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -71,7 +73,7 @@ func (app *application) loginHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Find the user with user's email
-	_, hashedPassword, err := db.GetUser(app.conn, app.ctx, `SELECT email, hashed_password FROM users WHERE email = $1`, user.Email)
+	userId, hashedPassword, err := db.GetUser(app.conn, app.ctx, `SELECT id, hashed_password FROM users WHERE email = $1`, user.Email)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -85,11 +87,49 @@ func (app *application) loginHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// User is successfully logged in
+	// Create a cookie for the user and save it in a sessions table
 
+	sessionId := uuid.New()
+
+	// Save it in database
+	err = db.InsertSession(app.conn, app.ctx, `INSERT INTO sessions (session_id, user_id) VALUES ($1, $2)`, sessionId.String(), userId)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	// Send the cookie to the frontend
+
+	cookie := &http.Cookie{
+		Name:     "sessionId",
+		Value:    sessionId.String(),
+		Path:     "/",
+		Expires:  time.Now().Add(24 * time.Hour),
+		HttpOnly: true,
+	}
+
+	http.SetCookie(w, cookie)
+
+	// User is successfully logged in
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 
 	w.Write([]byte(`{"message":"Login was successful"}`))
 
+}
+
+func (app *application) sessionHandler(w http.ResponseWriter, r *http.Request) {
+
+	cookie, err := r.Cookie("sessionId")
+	if err != nil {
+		fmt.Println("No cookie found in the header")
+		return
+	}
+
+	fmt.Println("Session id: ", cookie)
+
+	w.Header().Set("Content-Type", "application/json")
+
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte(`{"user":"ashhar"}`))
 }
