@@ -9,12 +9,14 @@ import (
 	"github.com/SpectreFury/go-auth/internal/db"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/go-chi/cors"
 	"github.com/jackc/pgx/v5"
 )
 
 type application struct {
 	config config
 	conn   *pgx.Conn
+	ctx    context.Context
 }
 
 type config struct {
@@ -30,6 +32,7 @@ func (app *application) mount() *chi.Mux {
 		log.Fatal(err)
 	}
 	app.conn = conn
+	app.ctx = ctx
 
 	r := chi.NewRouter()
 
@@ -37,10 +40,18 @@ func (app *application) mount() *chi.Mux {
 	r.Use(middleware.RealIP)
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
-
 	r.Use(middleware.Timeout(60 * time.Second))
+	r.Use(cors.Handler(cors.Options{
+		AllowedOrigins: []string{"https://*", "http://*"},
+		AllowedMethods: []string{"GET", "POST"},
+		AllowedHeaders: []string{"Accept", "Authorization", "Content-Type", "X-CSRF-Token"},
+		MaxAge:         300,
+	}))
 
-	r.Get("/health", app.healthCheckHandler)
+	r.Route("/api", func(r chi.Router) {
+		r.Post("/signup", app.signUpHandler)
+		r.Post("/login", app.loginHandler)
+	})
 
 	return r
 }

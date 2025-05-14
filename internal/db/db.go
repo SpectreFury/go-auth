@@ -2,10 +2,9 @@ package db
 
 import (
 	"context"
-	"log"
-	"os"
-
+	"fmt"
 	"github.com/jackc/pgx/v5"
+	"os"
 )
 
 func Connect(ctx context.Context) (*pgx.Conn, error) {
@@ -17,9 +16,45 @@ func Connect(ctx context.Context) (*pgx.Conn, error) {
 	return conn, err
 }
 
-func ExecQuery(conn *pgx.Conn, ctx context.Context, query string) error {
-	log.Println("Executing query: INSERT")
-	_, err := conn.Exec(ctx, query)
+func UserExists(conn *pgx.Conn, ctx context.Context, query string, email string) (bool, error) {
+	var scannedEmail string
+
+	err := conn.QueryRow(ctx, query, email).Scan(&scannedEmail)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			fmt.Println("RESULT: No user found")
+			return false, nil
+		}
+
+		fmt.Println("ERROR during query: ", err)
+		return false, err
+	}
+
+	fmt.Println("User found: ", scannedEmail)
+	return true, nil
+}
+
+func GetUser(conn *pgx.Conn, ctx context.Context, query string, email string) (userEmail string, hashedPassword string, returnError error) {
+	var scannedEmail string
+	var scannedPassword string
+
+	err := conn.QueryRow(ctx, query, email).Scan(&scannedEmail, &scannedPassword)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			fmt.Println("RESULT: No user found")
+			return "", "", nil
+		}
+
+		fmt.Println("ERROR during query: ", err)
+		return "", "", err
+	}
+
+	fmt.Println("User found: ", scannedEmail)
+	return scannedEmail, scannedPassword, nil
+}
+
+func InsertUser(conn *pgx.Conn, ctx context.Context, query string, email string, hashedPassword string) error {
+	_, err := conn.Exec(ctx, query, email, hashedPassword)
 
 	return err
 }
