@@ -70,3 +70,15 @@ func InsertSession(conn *pgx.Conn, ctx context.Context, query string, sessionId 
 	fmt.Println("Successfully inserted the session")
 	return nil
 }
+
+func DeleteSession(conn *pgx.Conn, ctx context.Context, query string, sessionId string) error {
+	_, err := conn.Exec(ctx, query, sessionId)
+
+	if err != nil {
+		fmt.Println("Error in deleting session")
+		return err
+	}
+
+	fmt.Println("Successfully deleted the session")
+	return nil
+}

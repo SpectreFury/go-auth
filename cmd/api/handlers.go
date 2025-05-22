@@ -16,6 +16,13 @@ type UserRequest struct {
 	Password string `json:"password"`
 }
 
+func (app *application) healthHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte(`{"message":"Healthy"}`))
+}
+
 func (app *application) signUpHandler(w http.ResponseWriter, r *http.Request) {
 	// Extract the body from the request
 	var user UserRequest
@@ -106,6 +113,7 @@ func (app *application) loginHandler(w http.ResponseWriter, r *http.Request) {
 		Path:     "/",
 		Expires:  time.Now().Add(24 * time.Hour),
 		HttpOnly: true,
+		Secure:   true,
 	}
 
 	http.SetCookie(w, cookie)
@@ -116,6 +124,37 @@ func (app *application) loginHandler(w http.ResponseWriter, r *http.Request) {
 
 	w.Write([]byte(`{"message":"Login was successful"}`))
 
+}
+
+func (app *application) logoutHandler(w http.ResponseWriter, r *http.Request) {
+	// Get the cookie from the request
+	cookie, err := r.Cookie("sessionId")
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	// Delete the session from the database
+	err = db.DeleteSession(app.conn, app.ctx, `DELETE FROM sessions WHERE session_id = $1`, cookie.Value)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	// Delete the cookie from the browser
+	c := &http.Cookie{
+		Name:     "sessionId",
+		Value:    "",
+		Path:     "/",
+		Expires:  time.Unix(0, 0),
+		HttpOnly: true,
+		Secure:   true,
+	}
+
+	http.SetCookie(w, c)
+
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte(`{"message":"Logout was successful"}`))
 }
 
 func (app *application) sessionHandler(w http.ResponseWriter, r *http.Request) {
