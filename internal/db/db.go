@@ -16,6 +16,24 @@ func Connect(ctx context.Context) (*pgx.Conn, error) {
 	return conn, err
 }
 
+func SessionExists(conn *pgx.Conn, ctx context.Context, query string, sessionId string) (bool, error) {
+	var scannedSesssionId string
+
+	err := conn.QueryRow(ctx, query, sessionId).Scan(&scannedSesssionId)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			fmt.Println("RESULT: No session found")
+			return false, nil
+		}
+
+		fmt.Println("ERROR during query: ", err)
+		return false, err
+	}
+
+	fmt.Println("Session found: ", scannedSesssionId)
+	return true, nil
+}
+
 func UserExists(conn *pgx.Conn, ctx context.Context, query string, email string) (bool, error) {
 	var scannedEmail string
 

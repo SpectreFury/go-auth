@@ -106,7 +106,6 @@ func (app *application) loginHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Send the cookie to the frontend
-
 	cookie := &http.Cookie{
 		Name:     "sessionId",
 		Value:    sessionId.String(),
@@ -157,18 +156,30 @@ func (app *application) logoutHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte(`{"message":"Logout was successful"}`))
 }
 
-func (app *application) sessionHandler(w http.ResponseWriter, r *http.Request) {
-
+func (app *application) protectedHandler(w http.ResponseWriter, r *http.Request) {
+	// Get the cookie from the request
 	cookie, err := r.Cookie("sessionId")
 	if err != nil {
-		fmt.Println("No cookie found in the header")
+		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}
 
-	fmt.Println("Session id: ", cookie)
+	// Check if the session exists in the database
+	session, err := db.SessionExists(app.conn, app.ctx, `SELECT session_id FROM sessions WHERE session_id = $1`, cookie.Value)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	if !session {
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+
+	// If the session exists, return a protected resource
 
 	w.Header().Set("Content-Type", "application/json")
 
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(`{"user":"ashhar"}`))
+	w.Write([]byte(`{"message":"Protected route"}`))
 }

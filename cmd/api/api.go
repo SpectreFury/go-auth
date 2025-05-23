@@ -50,9 +50,11 @@ func (app *application) mount() *chi.Mux {
 
 	r.Route("/api", func(r chi.Router) {
 		r.Get("/health", app.healthHandler)
-		r.Get("/session", app.sessionHandler)
 		r.Post("/signup", app.signUpHandler)
 		r.Post("/login", app.loginHandler)
+
+		// Protected routes
+		r.Get("/protected", app.protectedHandler)
 		r.Get("/logout", app.logoutHandler)
 	})
 
