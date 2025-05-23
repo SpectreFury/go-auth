@@ -33,6 +33,17 @@ I built this project to learn and experiment with authentication flows in Go, in
    npm run dev
    ```
 
+## Environment Variables
+
+Create a `.env` file in the project root with the following variables (example values shown):
+
+```
+PORT=localhost:3000
+POSTGRES_URI=postgresql://<user>:<password>@<host>:<port>/<database>
+```
+
+Adjust the values as needed for your setup.
+
 ## Disclaimer
 
 This project is for learning and demonstration purposes only. Do not use it as-is in production.
